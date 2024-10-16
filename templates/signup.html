@@ -55,6 +55,21 @@
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
         }
 
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+        }
+
+        .checkbox-group label {
+            font-size: 14px;
+            color: #555;
+        }
+
         .btn {
             width: 100%;
             padding: 12px;
@@ -71,15 +86,18 @@
             background-color: #0056b3;
         }
 
-        .error {
-            color: red;
+        p {
+            text-align: center;
             margin-top: 10px;
         }
 
-        @media (max-width: 400px) {
-            .signup-container {
-                width: 90%;
-            }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -97,21 +115,45 @@
                 <input type="password" id="password" name="password" required>
             </div>
 
+            <div class="checkbox-group">
+                <input type="checkbox" id="showPassword" onclick="togglePassword()">
+                <label for="showPassword">Show Password</label>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="input-group">
+                <label for="phone">Phone Number:</label>
+                <input type="text" id="phone" name="phone" required>
+            </div>
+
             <button type="submit" class="btn">Sign Up</button>
         </form>
 
-        <!-- Add a link to the login page here -->
-        <p style="text-align:center; margin-top: 10px;">
-            Already have an account? <a href="/">Login</a>
-        </p>
+        <p>Already have an account? <a href="/">Login</a></p>
     </div>
 
     <script>
+        function togglePassword() {
+            var passwordInput = document.getElementById("password");
+            var checkbox = document.getElementById("showPassword");
+            if (checkbox.checked) {
+                passwordInput.type = "text";
+            } else {
+                passwordInput.type = "password";
+            }
+        }
+
         function signupUser(event) {
             event.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
 
             fetch("/signup", {
                 method: "POST",
@@ -120,13 +162,15 @@
                 },
                 body: JSON.stringify({
                     username: username,
-                    password: password
+                    password: password,
+                    email: email,
+                    phone: phone
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert("Signup successful! You can now log in.");
+                    alert('Signup successful!');
                     window.location.href = "/";
                 } else {
                     alert(data.message);

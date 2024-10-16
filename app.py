@@ -1,14 +1,21 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from pymongo import MongoClient
+from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Change this to a secure key
+app.secret_key = 'your_secret_key'
 
-# User credentials stored for demo purposes (in-memory storage)
-users = {
-    "admin": "password123",
-    "user1": "mypassword",
-    "mithra": "mithra#123"
-}
+# Initialize MongoDB connection
+client = MongoClient('mongodb://localhost:27017/')
+
+def get_today_db():
+    """
+    Get the database based on today's date.
+    This ensures we store user data in a different database each day.
+    """
+    today_date = datetime.now().strftime("%Y_%m_%d")
+    return client[today_date]  # Returns today's database
+
 
 @app.route('/')
 def index():
@@ -17,35 +24,57 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('login.html')
 
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
 
-    # Check if the user exists and the password matches
-    if username in users and users[username] == password:
+    # Use today's date to access the correct database
+    db = get_today_db()
+    users_collection = db['users']
+
+    # Find the user in the MongoDB database
+    user = users_collection.find_one({'username': username})
+
+    # Check if user exists and if the plain password matches
+    if user and user['password'] == password:  # Plain-text password comparison
         session['username'] = username  # Store username in session
         return jsonify({"success": True})
     else:
         return jsonify({"success": False, "message": "Invalid username or password"})
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         data = request.get_json()
         username = data.get('username')
-        password = data.get('password')
+        password = data.get('password')  # Storing plain text password
+        email = data.get('email')
+        phone = data.get('phone')
 
-        # Check if username already exists
-        if username in users:
+        # Use today's date to access the correct database
+        db = get_today_db()
+        users_collection = db['users']
+
+        # Check if username already exists in MongoDB
+        if users_collection.find_one({'username': username}):
             return jsonify({"success": False, "message": "Username already exists"})
-        
-        # Add the new user
-        users[username] = password
+
+        # Insert new user with plain password into MongoDB
+        user_data = {
+            'username': username,
+            'password': password,  # Plain text password (NOT RECOMMENDED in production)
+            'email': email,
+            'phone': phone
+        }
+        users_collection.insert_one(user_data)
         return jsonify({"success": True})
-    
+
     return render_template('signup.html')
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -53,6 +82,7 @@ def dashboard():
     if 'username' not in session:
         return redirect(url_for('index'))  # Redirect to login if not logged in
     return render_template('dashboard.html')
+
 
 @app.route('/logout')
 def logout():
